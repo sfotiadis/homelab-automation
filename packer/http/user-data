@@ -1,0 +1,65 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+  
+  # Network configuration - DHCP during installation
+  network:
+    network:
+      version: 2
+      ethernets:
+        ens18:
+          dhcp4: true
+  
+  # Storage configuration
+  storage:
+    layout:
+      name: direct
+    config:
+      - type: disk
+        id: disk0
+        ptable: gpt
+        wipe: superblock
+        grub_device: true
+      - type: partition
+        id: bios_partition
+        device: disk0
+        size: 1MB
+        flag: bios_grub
+      - type: partition
+        id: boot_partition
+        device: disk0
+        size: 1GB
+        fs: ext4
+        mount: /boot
+      - type: partition
+        id: root_partition
+        device: disk0
+        size: -1
+        fs: ext4
+        mount: /
+  
+  # User account
+  identity:
+    hostname: ubuntu-template
+    username: ubuntu
+    password: "$6$fIH.bYgBJupb3Tg9$q2pFKtyR28.Ix0HJZNRJmAKdMa2XYNGegWRx/o0zqxmoWrYCNqtmVz6uiyeN84SRWu2N2cZVpJytz0ymQYBMo0"  # ubuntu
+  
+  # SSH configuration
+  ssh:
+    install-server: true
+    allow-pw: true
+  
+  # Packages to install
+  packages:
+    - qemu-guest-agent
+    - cloud-init
+    - net-tools
+  
+  # Late commands - run after installation
+  late-commands:
+    - echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/ubuntu
+    - curtin in-target --target=/target -- chmod 440 /etc/sudoers.d/ubuntu
+    - curtin in-target --target=/target -- systemctl enable qemu-guest-agent

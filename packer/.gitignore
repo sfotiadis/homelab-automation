@@ -1,0 +1,7 @@
+# Packer sensitive files
+secrets.pkrvars.hcl
+*.auto.pkrvars.hcl
+
+# Packer cache
+packer_cache/
+*.log
