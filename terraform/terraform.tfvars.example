@@ -1,0 +1,17 @@
+# IMPORTANT: Copy this file to terraform.tfvars and fill in your values
+# terraform.tfvars is in .gitignore and will not be committed
+
+# Proxmox API Credentials
+proxmox_api_url          = "https://YOUR_PROXMOX_IP:8006/api2/json"
+proxmox_api_token_id     = "root@pam!terraform"
+proxmox_api_token_secret = "YOUR_TOKEN_SECRET"
+
+# Network Settings
+network_gateway = "YOUR_GATEWAY_IP"
+
+# DNS Server IPs
+dns1_ip = "YOUR_DNS1_IP"
+dns2_ip = "YOUR_DNS2_IP"
+
+# SSH Public Key
+ssh_public_key = "YOUR_SSH_PUBLIC_KEY"
