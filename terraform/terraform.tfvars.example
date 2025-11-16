@@ -13,5 +13,20 @@ network_gateway = "YOUR_GATEWAY_IP"
 dns1_ip = "YOUR_DNS1_IP"
 dns2_ip = "YOUR_DNS2_IP"
 
+# Kubernetes Cluster IPs
+k8s_cp_ips = [
+  "YOUR_K8S_CP1_IP",
+  "YOUR_K8S_CP2_IP",
+  "YOUR_K8S_CP3_IP"
+]
+
+k8s_worker_ips = [
+  "YOUR_K8S_WORKER1_IP",
+  "YOUR_K8S_WORKER2_IP",
+  "YOUR_K8S_WORKER3_IP"
+]
+
+k8s_lb_ip = "YOUR_K8S_LB_IP"
+
 # SSH Public Key
 ssh_public_key = "YOUR_SSH_PUBLIC_KEY"
