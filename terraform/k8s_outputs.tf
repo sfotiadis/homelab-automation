@@ -57,13 +57,6 @@ output "k8s_cluster_summary" {
     Load Balancer:
       - k8s-lb-01: ${module.k8s_lb.ip_address} (VM ${var.k8s_lb_vm_id})
     
-    Next Steps:
-    1. Configure HAProxy on ${module.k8s_lb.ip_address}
-    2. Bootstrap first control plane node
-    3. Join remaining control plane nodes
-    4. Join worker nodes
-    5. Deploy CNI (Calico/Cilium)
-    6. Deploy MetalLB for LoadBalancer services
   EOT
   description = "Summary of Kubernetes cluster deployment"
 }

@@ -1,0 +1,25 @@
+[proxmox]
+pve
+
+[dns_servers]
+%{ for name, ip in dns_servers ~}
+${name} ansible_host=${ip}
+%{ endfor ~}
+
+[loadbalancer]
+%{ for name, ip in k8s_lb ~}
+${name} ansible_host=${ip}
+%{ endfor ~}
+
+[k8s_control_plane]
+%{ for name, ip in k8s_control_plane ~}
+${name} ansible_host=${ip}
+%{ endfor ~}
+
+[k8s_workers]
+%{ for name, ip in k8s_workers ~}
+${name} ansible_host=${ip}
+%{ endfor ~}
+
+[local]
+localhost ansible_connection=local ansible_python_interpreter=/home/spiro/ansible-venv/bin/python
