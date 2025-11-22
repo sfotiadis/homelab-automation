@@ -22,4 +22,15 @@ ${name} ansible_host=${ip}
 %{ endfor ~}
 
 [local]
-localhost ansible_connection=local ansible_python_interpreter=/home/spiro/ansible-venv/bin/python
+localhost ansible_connection=local ansible_python_interpreter=/usr/bin/python3
+
+# Group all VMs together
+[vms:children]
+dns_servers
+loadbalancer
+k8s_control_plane
+k8s_workers
+
+# Set ansible_user for all VMs
+[vms:vars]
+ansible_user=${ssh_user}

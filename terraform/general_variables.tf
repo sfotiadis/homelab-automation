@@ -48,3 +48,9 @@ variable "ssh_public_key" {
   description = "SSH Public Key for VM access"
   type        = string
 }
+
+variable "ssh_user" {
+  description = "SSH user for VMs"
+  type        = string
+  default     = "ubuntu"
+}

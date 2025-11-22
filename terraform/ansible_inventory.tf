@@ -18,6 +18,7 @@ resource "local_file" "ansible_inventory" {
       "k8s-worker-02" = module.k8s_worker_02.ip_address
       "k8s-worker-03" = module.k8s_worker_03.ip_address
     }
+    ssh_user = var.ssh_user
   })
   filename        = "${path.module}/../ansible/inventory.ini"
   file_permission = "0644"
