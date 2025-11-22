@@ -1,0 +1,42 @@
+---
+- name: Setup HAProxy LoadBalancer for K8s API Server
+  hosts: loadbalancer
+  become: true
+  tasks:
+    - name: Install HAProxy
+      ansible.builtin.apt:
+        name: haproxy
+        state: present
+        update_cache: true
+
+    - name: Configure HAProxy for K8s API Server
+      ansible.builtin.template:
+        src: ../templates/haproxy/haproxy.cfg.j2
+        dest: /etc/haproxy/haproxy.cfg
+        owner: root
+        group: root
+        mode: '0644'
+        validate: haproxy -c -f %s
+      notify: restart haproxy
+
+    - name: Enable and start HAProxy
+      ansible.builtin.systemd:
+        name: haproxy
+        state: started
+        enabled: true
+
+    - name: Allow HAProxy ports in firewall (if ufw is enabled)
+      community.general.ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - "{{ k8s_api_port }}"
+        - "{{ haproxy_stats_port }}"
+      ignore_errors: true
+
+  handlers:
+    - name: restart haproxy
+      ansible.builtin.systemd:
+        name: haproxy
+        state: restarted

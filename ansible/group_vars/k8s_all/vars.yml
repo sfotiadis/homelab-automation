@@ -1,0 +1,27 @@
+---
+# Kubernetes Cluster Configuration
+k8s_cluster_name: "crulabs-k8s"
+k8s_version: "1.34"  # Kubernetes version to install
+k8s_pod_network_cidr: "10.244.0.0/16"  # Pod network CIDR (Cilium default)
+k8s_service_cidr: "10.96.0.0/12"  # Service network CIDR (K8s default)
+
+# Control Plane Endpoint (LoadBalancer) - from inventory
+k8s_control_plane_endpoint: "{{ hostvars['k8s-lb-01']['ansible_host'] }}:6443"
+
+# Container Runtime
+containerd_version: "1.7"
+
+# System Configuration
+disable_swap: true
+enable_ipv4_forwarding: true
+
+# Required kernel modules
+kernel_modules:
+  - overlay
+  - br_netfilter
+
+# Sysctl settings for Kubernetes
+sysctl_config:
+  net.bridge.bridge-nf-call-iptables: 1
+  net.bridge.bridge-nf-call-ip6tables: 1
+  net.ipv4.ip_forward: 1
