@@ -24,6 +24,11 @@ ${name} ansible_host=${ip}
 [local]
 localhost ansible_connection=local ansible_python_interpreter=/usr/bin/python3
 
+# Group all K8s nodes (control plane + workers)
+[k8s_all:children]
+k8s_control_plane
+k8s_workers
+
 # Group all VMs together
 [vms:children]
 dns_servers
