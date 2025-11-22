@@ -1,0 +1,39 @@
+dns_primary_ip: "{{ hostvars['dns1']['ansible_host'] }}"
+dns_secondary_ip: "{{ hostvars['dns2']['ansible_host'] }}"
+
+dns_domain_primary: "crulabs.intern"
+dns_domain_secondary: "internal"
+
+# Calculate reverse zone from DNS primary IP
+reverse_zone: "{{ dns_primary_ip.split('.')[2] }}.{{ dns_primary_ip.split('.')[1] }}.{{ dns_primary_ip.split('.')[0] }}.in-addr.arpa"
+reverse_zone_file: "db.{{ dns_primary_ip.split('.')[0] }}.{{ dns_primary_ip.split('.')[1] }}.{{ dns_primary_ip.split('.')[2] }}"
+
+zone_records:
+  # Zone records for crulabs.intern
+  crulabs_intern:
+    - { name: "pve", ip: "{{ hostvars['pve']['ansible_host'] }}" }
+    - { name: "k8s-cp-01", ip: "{{ hostvars['k8s-cp-01']['ansible_host'] }}" }
+    - { name: "k8s-cp-02", ip: "{{ hostvars['k8s-cp-02']['ansible_host'] }}" }
+    - { name: "k8s-cp-03", ip: "{{ hostvars['k8s-cp-03']['ansible_host'] }}" }
+    - { name: "k8s-worker-01", ip: "{{ hostvars['k8s-worker-01']['ansible_host'] }}" }
+    - { name: "k8s-worker-02", ip: "{{ hostvars['k8s-worker-02']['ansible_host'] }}" }
+    - { name: "k8s-worker-03", ip: "{{ hostvars['k8s-worker-03']['ansible_host'] }}" }
+    - { name: "k8s-lb-01", ip: "{{ hostvars['k8s-lb-01']['ansible_host'] }}" }
+
+  # Zone records for internal
+  internal:
+    - { name: "pve", ip: "{{ hostvars['pve']['ansible_host'] }}" }
+    - { name: "nextcloud", ip: "{{ nextcloud_ip }}" }
+
+reverse_zone_records:
+  - { ip: "{{ hostvars['pve']['ansible_host'].split('.')[-1] }}", fqdn: "pve.internal." }
+  - { ip: "{{ hostvars['dns1']['ansible_host'].split('.')[-1] }}", fqdn: "dns1.internal." }
+  - { ip: "{{ hostvars['dns2']['ansible_host'].split('.')[-1] }}", fqdn: "dns2.internal." }
+  - { ip: "{{ nextcloud_ip.split('.')[-1] }}", fqdn: "nextcloud.internal." }
+  - { ip: "{{ hostvars['k8s-cp-01']['ansible_host'].split('.')[-1] }}", fqdn: "k8s-cp-01.crulabs.intern." }
+  - { ip: "{{ hostvars['k8s-cp-02']['ansible_host'].split('.')[-1] }}", fqdn: "k8s-cp-02.crulabs.intern." }
+  - { ip: "{{ hostvars['k8s-cp-03']['ansible_host'].split('.')[-1] }}", fqdn: "k8s-cp-03.crulabs.intern." }
+  - { ip: "{{ hostvars['k8s-lb-01']['ansible_host'].split('.')[-1] }}", fqdn: "k8s-lb-01.crulabs.intern." }
+  - { ip: "{{ hostvars['k8s-worker-01']['ansible_host'].split('.')[-1] }}", fqdn: "k8s-worker-01.crulabs.intern." }
+  - { ip: "{{ hostvars['k8s-worker-02']['ansible_host'].split('.')[-1] }}", fqdn: "k8s-worker-02.crulabs.intern." }
+  - { ip: "{{ hostvars['k8s-worker-03']['ansible_host'].split('.')[-1] }}", fqdn: "k8s-worker-03.crulabs.intern." }

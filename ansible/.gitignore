@@ -1,7 +1,7 @@
 # Ansible vault and secrets
 .vault_pass
 *.vault
-host_vars/*/vault.yml
+# Note: vault.yml files are encrypted and can be committed after encryption
 inventory.ini
 
 # Ansible retry files
