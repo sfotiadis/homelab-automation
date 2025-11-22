@@ -1,0 +1,12 @@
+# Ansible vault and secrets
+.vault_pass
+*.vault
+host_vars/*/vault.yml
+inventory.ini
+
+# Ansible retry files
+*.retry
+
+# Python
+__pycache__/
+*.pyc
