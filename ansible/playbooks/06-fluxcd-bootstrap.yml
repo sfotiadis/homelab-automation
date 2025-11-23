@@ -1,0 +1,205 @@
+---
+- name: Bootstrap FluxCD with SOPS
+  hosts: localhost
+  gather_facts: true
+  vars_files:
+    - ../group_vars/k8s_all/flux_vault.yml
+  vars:
+    flux_version: "2.7.3"
+    flux_namespace: "flux-system"
+    gpg_key_name: "FluxCD SOPS"
+    gpg_key_email: "flux@crulabs.intern"
+    gpg_key_comment: "SOPS encryption for FluxCD"
+    gpg_key_file: "{{ lookup('env', 'HOME') }}/.config/sops/flux-gpg-key.asc"
+    gpg_fingerprint_file: "{{ lookup('env', 'HOME') }}/.config/sops/flux-gpg-fingerprint.txt"
+    kubeconfig_path: "{{ lookup('env', 'HOME') }}/.kube/config"
+  tasks:
+    - name: Ensure SOPS config directory exists
+      ansible.builtin.file:
+        path: "{{ lookup('env', 'HOME') }}/.config/sops"
+        state: directory
+        mode: '0700'
+
+    - name: Check if GPG key already exists
+      ansible.builtin.stat:
+        path: "{{ gpg_key_file }}"
+      register: gpg_key_exists
+
+    - name: Check if fingerprint file already exists
+      ansible.builtin.stat:
+        path: "{{ gpg_fingerprint_file }}"
+      register: gpg_fingerprint_exists
+
+    - name: Generate GPG key for SOPS
+      ansible.builtin.shell: |
+        gpg --batch --full-generate-key <<EOF
+        %no-protection
+        Key-Type: RSA
+        Key-Length: 4096
+        Name-Real: {{ gpg_key_name }}
+        Name-Email: {{ gpg_key_email }}
+        Name-Comment: {{ gpg_key_comment }}
+        Expire-Date: 0
+        EOF
+      when: not gpg_key_exists.stat.exists
+      register: gpg_gen_result
+
+    - name: Get GPG key fingerprint
+      ansible.builtin.shell: |
+        gpg --list-keys --with-colons "{{ gpg_key_email }}" | awk -F: '/^fpr:/ {print $10; exit}'
+      register: gpg_fingerprint
+      changed_when: false
+
+    - name: Save GPG fingerprint to file
+      ansible.builtin.copy:
+        content: "{{ gpg_fingerprint.stdout }}"
+        dest: "{{ gpg_fingerprint_file }}"
+        mode: '0600'
+      when: not gpg_fingerprint_exists.stat.exists
+
+    - name: Export GPG private key
+      ansible.builtin.shell: |
+        gpg --export-secret-keys --armor "{{ gpg_key_email }}"
+      register: gpg_private_key
+      changed_when: false
+
+    - name: Save GPG private key to file
+      ansible.builtin.copy:
+        content: "{{ gpg_private_key.stdout }}"
+        dest: "{{ gpg_key_file }}"
+        mode: '0600'
+      when: not gpg_key_exists.stat.exists
+
+    - name: Display GPG fingerprint
+      ansible.builtin.debug:
+        msg: |
+          GPG Key generated successfully!
+          Fingerprint: {{ gpg_fingerprint.stdout }}
+
+          Add this fingerprint to your .sops.yaml configuration:
+
+          creation_rules:
+            - path_regex: .*.yaml
+              encrypted_regex: ^(data|stringData)$
+              pgp: {{ gpg_fingerprint.stdout }}
+
+    - name: Check if Flux CLI is installed
+      ansible.builtin.command: which flux
+      register: flux_cli_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Download Flux CLI
+      ansible.builtin.get_url:
+        url: "https://github.com/fluxcd/flux2/releases/download/v{{ flux_version }}/flux_{{ flux_version }}_linux_amd64.tar.gz"
+        dest: "/tmp/flux_{{ flux_version }}_linux_amd64.tar.gz"
+        mode: '0644'
+      when: flux_cli_check.rc != 0
+
+    - name: Extract Flux CLI
+      ansible.builtin.unarchive:
+        src: "/tmp/flux_{{ flux_version }}_linux_amd64.tar.gz"
+        dest: "/tmp/"
+      when: flux_cli_check.rc != 0
+
+    - name: Install Flux CLI to user local bin
+      ansible.builtin.copy:
+        src: "/tmp/flux"
+        dest: "{{ lookup('env', 'HOME') }}/.local/bin/flux"
+        mode: '0755'
+      when: flux_cli_check.rc != 0
+
+    - name: Ensure flux binary path is set
+      ansible.builtin.set_fact:
+        flux_binary: "{{ flux_cli_check.stdout if flux_cli_check.rc == 0 else lookup('env', 'HOME') + '/.local/bin/flux' }}"
+
+    - name: Check if Flux is already installed in cluster
+      ansible.builtin.shell: |
+        kubectl --kubeconfig={{ kubeconfig_path }} get namespace {{ flux_namespace }}
+      register: flux_namespace_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Pre-check Kubernetes cluster
+      ansible.builtin.shell: |
+        {{ flux_binary | default('flux') }} check --pre
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      when: flux_namespace_check.rc != 0
+
+    - name: Install Flux components
+      ansible.builtin.shell: |
+        {{ flux_binary | default('flux') }} install \
+          --namespace={{ flux_namespace }} \
+          --network-policy=false \
+          --components=source-controller,kustomize-controller,helm-controller,notification-controller
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      when: flux_namespace_check.rc != 0
+      register: flux_install
+
+    - name: Wait for Flux to be ready
+      ansible.builtin.shell: |
+        kubectl --kubeconfig={{ kubeconfig_path }} wait --for=condition=available --timeout=300s \
+          --all deployments -n {{ flux_namespace }}
+      register: flux_ready
+      retries: 5
+      delay: 10
+      until: flux_ready.rc == 0
+
+    - name: Create SOPS GPG secret in Kubernetes
+      ansible.builtin.shell: |
+        kubectl --kubeconfig={{ kubeconfig_path }} create secret generic sops-gpg \
+          --namespace={{ flux_namespace }} \
+          --from-file=sops.asc={{ gpg_key_file }} \
+          --dry-run=client -o yaml | kubectl apply -f -
+      register: sops_secret_created
+
+    - name: Verify Flux installation
+      ansible.builtin.shell: |
+        {{ flux_binary | default('flux') }} check
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: flux_check
+
+    - name: Display Flux check results
+      ansible.builtin.debug:
+        msg: "{{ flux_check.stdout_lines }}"
+
+    - name: Create GitHub PAT secret in Kubernetes
+      ansible.builtin.shell: |
+        kubectl --kubeconfig={{ kubeconfig_path }} create secret generic flux-github-auth \
+          --namespace={{ flux_namespace }} \
+          --from-literal=username={{ flux_github_user }} \
+          --from-literal=password={{ flux_github_token }} \
+          --dry-run=client -o yaml | kubectl --kubeconfig={{ kubeconfig_path }} apply -f -
+      register: github_secret_created
+      no_log: true
+
+    - name: Create GitRepository source
+      ansible.builtin.shell: |
+        {{ flux_binary | default('flux') }} create source git {{ flux_git_repo }} \
+          --url={{ flux_git_url }} \
+          --branch={{ flux_git_branch }} \
+          --interval=1m \
+          --secret-ref=flux-github-auth \
+          --namespace={{ flux_namespace }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: git_source_created
+      ignore_errors: true
+
+    - name: Create Kustomization for cluster
+      ansible.builtin.shell: |
+        {{ flux_binary | default('flux') }} create kustomization {{ flux_git_repo }} \
+          --source=GitRepository/{{ flux_git_repo }} \
+          --path="{{ flux_git_path }}" \
+          --prune=true \
+          --interval=5m \
+          --decryption-provider=sops \
+          --decryption-secret=sops-gpg \
+          --namespace={{ flux_namespace }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: kustomization_created
+      ignore_errors: true
