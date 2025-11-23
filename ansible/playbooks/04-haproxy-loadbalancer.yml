@@ -1,5 +1,5 @@
 ---
-- name: Setup HAProxy LoadBalancer for K8s API Server
+- name: Setup HAProxy LoadBalancer for K8s API Server and Ingress
   hosts: loadbalancer
   become: true
   tasks:
@@ -9,7 +9,7 @@
         state: present
         update_cache: true
 
-    - name: Configure HAProxy for K8s API Server
+    - name: Configure HAProxy for K8s API Server and Ingress
       ansible.builtin.template:
         src: ../templates/haproxy/haproxy.cfg.j2
         dest: /etc/haproxy/haproxy.cfg
@@ -33,6 +33,8 @@
       loop:
         - "{{ k8s_api_port }}"
         - "{{ haproxy_stats_port }}"
+        - "80"   # HTTP
+        - "443"  # HTTPS
       ignore_errors: true
 
   handlers:

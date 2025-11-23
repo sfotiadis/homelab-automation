@@ -13,3 +13,14 @@ k8s_api_backend_servers:
     ip: "{{ hostvars['k8s-cp-02']['ansible_host'] }}"
   - name: "{{ hostvars['k8s-cp-03']['inventory_hostname'] }}"
     ip: "{{ hostvars['k8s-cp-03']['ansible_host'] }}"
+
+# Ingress Controller backend configuration (NodePorts)
+ingress_http_port: 30080
+ingress_https_port: 30443
+ingress_backend_servers:
+  - name: "{{ hostvars['k8s-worker-01']['inventory_hostname'] }}"
+    ip: "{{ hostvars['k8s-worker-01']['ansible_host'] }}"
+  - name: "{{ hostvars['k8s-worker-02']['inventory_hostname'] }}"
+    ip: "{{ hostvars['k8s-worker-02']['ansible_host'] }}"
+  - name: "{{ hostvars['k8s-worker-03']['inventory_hostname'] }}"
+    ip: "{{ hostvars['k8s-worker-03']['ansible_host'] }}"
